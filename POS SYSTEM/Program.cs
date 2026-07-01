@@ -8,17 +8,12 @@ namespace POS_SYSTEM
 {
     class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
-            ProductRepository repo = new ProductRepository();
-            ProductService productService = new ProductService(repo);
+            ProductSqlRepository sqlRepo = new ProductSqlRepository();
+            ProductService productService = new ProductService(sqlRepo);
             Cart cart = new Cart();
             CheckoutService checkout = new CheckoutService(productService, cart);
-
-            productService.AddProduct("Laptop", 50000, 10);
-            productService.AddProduct("Mouse", 500, 50);
-            productService.AddProduct("Keyboard", 1500, 30);
-            productService.AddProduct("Monitor", 8000, 15);
 
             bool running = true;
 
@@ -30,11 +25,12 @@ namespace POS_SYSTEM
                 Console.WriteLine("════════════════════════════════");
                 Console.WriteLine("1. Add Product");
                 Console.WriteLine("2. View All Products");
-                Console.WriteLine("3. Add to Cart");
-                Console.WriteLine("4. View Cart");
-                Console.WriteLine("5. Remove from Cart");
-                Console.WriteLine("6. Checkout (Cash)");
-                Console.WriteLine("7. Exit");
+                Console.WriteLine("3. Update Product");
+                Console.WriteLine("4. Delete Product");
+                Console.WriteLine("5. Add to Cart");
+                Console.WriteLine("6. View Cart");
+                Console.WriteLine("7. Checkout (Cash)");
+                Console.WriteLine("8. Exit");
                 Console.WriteLine("════════════════════════════════");
                 Console.Write("Enter your choice: ");
 
@@ -49,18 +45,21 @@ namespace POS_SYSTEM
                         ViewAllProducts(productService);
                         break;
                     case "3":
-                        AddToCartFlow(checkout);
+                        UpdateProductFlow(productService);
                         break;
                     case "4":
-                        checkout.ViewCart();
+                        DeleteProductFlow(productService);
                         break;
                     case "5":
-                        RemoveFromCartFlow(checkout);
+                        AddToCartFlow(checkout);
                         break;
                     case "6":
-                        CheckoutFlow(checkout);
+                        checkout.ViewCart();
                         break;
                     case "7":
+                        CheckoutFlow(checkout);
+                        break;
+                    case "8":
                         running = false;
                         Console.WriteLine("Thank you for using POS System!");
                         break;
@@ -82,7 +81,17 @@ namespace POS_SYSTEM
             Console.Clear();
             Console.WriteLine("=== ADD PRODUCT ===");
 
-            Console.Write("Enter product name: ");
+            // "Show available categories"
+            // "Show available categories"
+            Console.WriteLine("\nAvailable Categories:");
+            var categories = service.GetAllCategories();
+            foreach (var cat in categories)
+            {
+                Console.WriteLine($"  {cat.Id}. {cat.Name}");
+            }
+            Console.WriteLine();
+
+            Console.Write("\nEnter product name: ");
             string name = Console.ReadLine();
 
             decimal price;
@@ -103,7 +112,16 @@ namespace POS_SYSTEM
                 Console.WriteLine("Invalid stock. Try again.");
             }
 
-            service.AddProduct(name, price, stock);
+            // "Ask for category ID"
+            int? categoryId = null;
+            Console.Write("Enter Category ID (or press Enter to skip): ");
+            string catInput = Console.ReadLine();
+            if (!string.IsNullOrWhiteSpace(catInput) && int.TryParse(catInput, out int catId))
+            {
+                categoryId = catId;
+            }
+
+            service.AddProduct(name, price, stock, categoryId);
         }
 
         static void ViewAllProducts(ProductService service)
@@ -118,12 +136,84 @@ namespace POS_SYSTEM
                 return;
             }
 
-            Console.WriteLine($"{"ID",-5} {"Name",-20} {"Price",-10} {"Stock",-10}");
-            Console.WriteLine(new string('-', 45));
+            // UPDATED: Added Category column
+            Console.WriteLine($"{"ID",-5} {"Name",-20} {"Price",-10} {"Stock",-8} {"Category",-15}");
+            Console.WriteLine(new string('-', 60));
             foreach (var p in products)
             {
-                Console.WriteLine($"{p.Id,-5} {p.Name,-20} ₱{p.Price,-9:N2} {p.Stock,-10}");
+                string category = p.CategoryName ?? "None";
+                Console.WriteLine($"{p.Id,-5} {p.Name,-20} ₱{p.Price,-9:N2} {p.Stock,-8} {category,-15}");
             }
+        }
+
+        static void UpdateProductFlow(ProductService service)
+        {
+
+            Console.Clear();
+            Console.WriteLine("=== UPDATE PRODUCT ===");
+
+            int id;
+            while (true)
+            {
+                Console.Write("Enter product ID to update: ");
+                if (int.TryParse(Console.ReadLine(), out id))
+                    break;
+                Console.WriteLine("Invalid ID. Try again.");
+            }
+
+            Console.Write("Enter new name: ");
+            string name = Console.ReadLine();
+
+            decimal price;
+            while (true)
+            {
+                Console.Write("Enter new price: ");
+                if (decimal.TryParse(Console.ReadLine(), out price))
+                    break;
+                Console.WriteLine("Invalid price. Try again.");
+            }
+
+            int stock;
+            while (true)
+            {
+                Console.Write("Enter new stock: ");
+                if (int.TryParse(Console.ReadLine(), out stock))
+                    break;
+                Console.WriteLine("Invalid stock. Try again.");
+            }
+            Console.WriteLine("\nAvailable Categories:");
+            var categories = service.GetAllCategories();
+            foreach (var cat in categories)
+            {
+                Console.WriteLine($"  {cat.Id}. {cat.Name}");
+            }
+            // NEW: Ask for category ID
+            int? categoryId = null;
+            Console.Write("Enter new Category ID (or press Enter to skip): ");
+            string catInput = Console.ReadLine();
+            if (!string.IsNullOrWhiteSpace(catInput) && int.TryParse(catInput, out int catId))
+            {
+                categoryId = catId;
+            }
+
+            service.UpdateProduct(id, name, price, stock, categoryId);
+        }
+
+        static void DeleteProductFlow(ProductService service)
+        {
+            Console.Clear();
+            Console.WriteLine("=== DELETE PRODUCT ===");
+
+            int id;
+            while (true)
+            {
+                Console.Write("Enter product ID to delete: ");
+                if (int.TryParse(Console.ReadLine(), out id))
+                    break;
+                Console.WriteLine("Invalid ID. Try again.");
+            }
+
+            service.DeleteProduct(id);
         }
 
         static void AddToCartFlow(CheckoutService checkout)
@@ -152,28 +242,11 @@ namespace POS_SYSTEM
             checkout.AddToCart(productId, quantity);
         }
 
-        static void RemoveFromCartFlow(CheckoutService checkout)
-        {
-            Console.Clear();
-            Console.WriteLine("=== REMOVE FROM CART ===");
-
-            int productId;
-            while (true)
-            {
-                Console.Write("Enter product ID to remove: ");
-                if (int.TryParse(Console.ReadLine(), out productId))
-                    break;
-                Console.WriteLine("Invalid ID. Try again.");
-            }
-
-            checkout.RemoveFromCart(productId);
-        }
-
         static void CheckoutFlow(CheckoutService checkout)
         {
             Console.Clear();
             Console.WriteLine("=== CHECKOUT ===");
-
+                
             IPaymentProcessor payment = new CashPayment();
             checkout.Checkout(payment);
         }

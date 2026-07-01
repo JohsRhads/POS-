@@ -7,125 +7,112 @@ namespace POS_SYSTEM.Services
 {
     public class ProductService
     {
-        private ProductRepository repos;
-        
-        public ProductService(ProductRepository repo)
+        private ProductSqlRepository repo;
+
+        public ProductService(ProductSqlRepository repo)
         {
-            repos = repo;
+            this.repo = repo;
         }
 
-        public void AddProduct(string name ,decimal  price , int stock)
+        public List<Product> GetAllProducts()
+        {
+            var products = repo.GetAll();
+
+            if (products == null || products.Count == 0)
+            {
+                Console.WriteLine("No products found.");
+                return new List<Product>();
+            }
+
+            return products;
+        }
+
+        public void AddProduct(string name, decimal price, int stock, int? categoryId = null)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
                 Console.WriteLine("NAME CANNOT BE EMPTY");
                 return;
-                
             }
             if (price <= 0)
             {
                 Console.WriteLine("PLEASE INPUT VALID PRICE");
                 return;
             }
-            if (stock <= 0)
+            if (stock < 0)
             {
-                Console.WriteLine("PLEASE INNPUT VALID STOCK");
-                return;
-            }
-            Product product = new Product(name,price,stock);
-            repos.AddProduct(product);
-        }
-        public List<Product> GetAllProducts()
-        {
-            var products = repos.GetAll();
-
-            if (products == null || products.Count == 0)
-            {
-                Console.WriteLine("No products found.");
-                return new List<Product>(); // Return empty list
-            }
-
-            return products;
-        }
-        public Product GetProductById(int id)
-        {
-            if(id <= 0)
-            {
-                Console.WriteLine("PLEASE ENTER A VALID ID");
-                return null;
-            }
-            return repos.GetById(id);
-        }
-        public void UpdateProduct(int id, string name, decimal price, int stock)
-        {
-            // ✓ VALIDATION 1: Check if ID is valid
-            if (id <= 0)
-            {
-                Console.WriteLine("INVALID ID. ID MUST BE GREATER THAN 0.");
+                Console.WriteLine("PLEASE INPUT VALID STOCK");
                 return;
             }
 
-            // ✓ VALIDATION 2: Check if product exists in the repository
-            var existingProduct = repos.GetById(id);
+            Product product = new Product(name, price, stock, categoryId);
+            repo.Add(product);
+            Console.WriteLine($"Product '{name}' added successfully.");
+        }
+
+        public Product GetById(int id)
+        {
+            var product = repo.GetById(id);
+
+            if (product == null)
+                Console.WriteLine("Product not found.");
+
+            return product;
+        }
+
+        public void UpdateProduct(int id, string name, decimal price, int stock, int? categoryId = null)
+        {
+            var existingProduct = repo.GetById(id);
+
             if (existingProduct == null)
             {
-                Console.WriteLine($"PRODUCT WITH ID {id} NOT FOUND.");
+                Console.WriteLine($"Product with ID {id} not found.");
                 return;
             }
 
-            // ✓ VALIDATION 3: Check if name is empty or whitespace
             if (string.IsNullOrWhiteSpace(name))
             {
-                Console.WriteLine("NAME CANNOT BE EMPTY");
+                Console.WriteLine("Name cannot be empty.");
                 return;
             }
 
-            // ✓ VALIDATION 4: Check if price is valid (greater than 0)
             if (price <= 0)
             {
-                Console.WriteLine("PLEASE INPUT VALID PRICE (MUST BE GREATER THAN 0)");
+                Console.WriteLine("Price must be greater than 0.");
                 return;
             }
 
-            // ✓ VALIDATION 5: Check if stock is valid (greater than or equal to 0)
-            if (stock < 0)  // Note: Stock can be 0, but not negative
+            if (stock < 0)
             {
-                Console.WriteLine("PLEASE INPUT VALID STOCK (CANNOT BE NEGATIVE)");
+                Console.WriteLine("Stock cannot be negative.");
                 return;
             }
 
-            // ✓ All validations passed - Create updated product
-            Product updatedProduct = new Product(name, price, stock);
-            updatedProduct.Id = id; // Set the ID to match existing product
+            existingProduct.Name = name;
+            existingProduct.Price = price;
+            existingProduct.Stock = stock;
+            existingProduct.CategoryId = categoryId;
 
-            // ✓ Call repository to update
-            repos.Update(updatedProduct);
-
-            // ✓ Success message
-            Console.WriteLine($"PRODUCT WITH ID {id} UPDATED SUCCESSFULLY!");
+            repo.UpdateProduct(existingProduct);
+            Console.WriteLine($"Product with ID {id} updated successfully.");
         }
+
         public void DeleteProduct(int id)
         {
-            // ✓ VALIDATION 1: Check if ID is valid
-            if (id <= 0)
-            {
-                Console.WriteLine("INVALID ID. ID MUST BE GREATER THAN 0.");
-                return;
-            }
+            var existingProduct = repo.GetById(id);
 
-            // ✓ VALIDATION 2: Check if product exists before deleting
-            var existingProduct = repos.GetById(id);
             if (existingProduct == null)
             {
-                Console.WriteLine($"PRODUCT WITH ID {id} NOT FOUND.");
+                Console.WriteLine($"Product with ID {id} not found.");
                 return;
             }
 
-            // ✓ Call repository to delete
-            repos.Delete(id);
-
-            // ✓ Success message (optional, since your repo already has one)
-            Console.WriteLine($"PRODUCT WITH ID {id} DELETED SUCCESSFULLY!");
+            repo.DeleteProduct(id);
+            Console.WriteLine($"Product with ID {id} deleted successfully.");
+        }
+        public List<Category> GetAllCategories()
+        {
+            return repo.GetAllCategories();
         }
     }
 }

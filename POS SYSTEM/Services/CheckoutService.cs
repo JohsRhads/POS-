@@ -3,7 +3,6 @@ using POS_SYSTEM.Models;
 using POS_SYSTEM.Services;
 using System;
 
-
 namespace POS_SYSTEM.Services
 {
     public class CheckoutService
@@ -19,24 +18,20 @@ namespace POS_SYSTEM.Services
 
         public void AddToCart(int productId, int quantity)
         {
-            // Find the product
-            var product = _productService.GetProductById(productId);
+            var product = _productService.GetById(productId);
 
-            // Check if product exists
             if (product == null)
             {
                 Console.WriteLine("Product not found.");
                 return;
             }
 
-            // Check if enough stock
             if (quantity > product.Stock)
             {
                 Console.WriteLine($"Not enough stock. Only {product.Stock} available.");
                 return;
             }
 
-            // Add to cart
             _cart.AddItem(product, quantity);
             Console.WriteLine($"Added {quantity} x {product.Name} to cart.");
         }
@@ -48,7 +43,7 @@ namespace POS_SYSTEM.Services
 
         public void ViewCart()
         {
-            var items = _cart.GetItems(); // You'll need to add this to Cart.cs
+            var items = _cart.GetItems();
 
             if (items.Count == 0)
             {
@@ -92,10 +87,9 @@ namespace POS_SYSTEM.Services
                 return false;
             }
 
-            // Reduce stock
             foreach (var item in items)
             {
-                var product = _productService.GetProductById(item.Product.Id);
+                var product = _productService.GetById(item.Product.Id);
                 if (product != null)
                 {
                     product.Stock -= item.Quantity;
